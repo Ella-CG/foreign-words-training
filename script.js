@@ -13,6 +13,8 @@ const studyCards = document.querySelector('.study-cards');
 const studyMode = document.querySelector('#study-mode');
 const examCards = document.querySelector('#exam-cards');
 const examMode = document.querySelector('#exam-mode');
+const examProgress = document.querySelector('#exam-progress');
+const correctPercent = document.querySelector('#correct-percent');
 
 
 
@@ -49,9 +51,17 @@ let slideCounter = 0;
 let isFliped = false;
 let wordCounter = 1;
 wordsProgress.value = 20;
-let firstCard = null;
-let secondCard = null;
+examProgress.value = 0;
+let selectedWord = null;
+const dictionary = {};
 
+function fillDictionary() {
+    items.forEach((item) => {
+        dictionary[item.word] = item.translation;
+        dictionary[item.translation] = item.word;
+    });
+
+}
 
 function addWord() {
     frontTitle.textContent = items[index].word;
@@ -62,6 +72,7 @@ function addWord() {
 
 }
 addWord();
+fillDictionary();
 
 function flipCards() {
     isFliped = !isFliped;
@@ -104,50 +115,74 @@ flipCard.addEventListener("click", flipCards);
 buttonNext.addEventListener("click", nextSlide);
 buttonBack.addEventListener("click", prevSlide);
 
-function shuffleCards() {
-    for (let i = 0; i < items.length; i++) {
-        const randomIndex = Math.floor(Math.random() * items.length);
-        const temp = items[i];
-        items[i] = items[randomIndex];
-        items[randomIndex] = temp;
-    }
 
-} //длина = 5, а мне нужно 10, а то карточки перемешиваются по 5 два раза
+function shuffleCards(arr) {
+    arr.sort(() => Math.random() - 0.5);
+}
 
-function prepareCards() {
-    shuffleCards();
-    items.forEach(item => {
-        const card = document.createElement('div');
-        card.textContent = item.word;
-        card.classList.add('card');
-
-        card.addEventListener("click", function() {
-            if (firstCard === null) {
-                firstCard = card;
-                firstCard.classList.add('correct');
-            } else {
-                secondCard = card;
-            }
-            //  вот здесь я застопорилась, потому что не могу сравнить карточки между собой из-за дублирования.
-            if (firstCard !== null && secondCard !== null) {
-                const firstCardText = card.textContent;
-                const secondCardText = card.textContent;
-                if (firstCardText === secondCardText) {
-                    secondCard.classList.add('correct');
-                }
-
-            }
-        });
-        examCards.append(card);
+function renderExamCards() {
+    const fragment = new DocumentFragment();
+    const arr = [];
+    items.forEach((item) => {
+        const question = makeExamCard(item.word);
+        arr.push(question);
+        const answer = makeExamCard(item.translation);
+        arr.push(answer);
     });
-    shuffleCards();
-    items.forEach(item => {
-        const card = document.createElement('div');
-        card.textContent = item.translation;
-        card.classList.add('card');
-        examCards.append(card);
-    })
+    shuffleCards(arr);
+    fragment.append(...arr);
+    examCards.innerHTML = "";
+    examCards.append(fragment);
 
+}
+
+function makeExamCard(word) {
+    const card = document.createElement("div");
+    card.classList.add("card");
+    card.textContent = word;
+
+    card.addEventListener("click", function() {
+        if (!selectedWord) {
+            selectedWord = this.textContent;
+            this.classList.add("correct");
+
+        } else {
+            if (dictionary[this.textContent] === selectedWord) {
+                this.classList.add("correct");
+                if (card.classList.contains("correct")) {
+                    card.classList.add("fade-out");
+                }
+                //убирается только вторая карточка, не могу добраться до первой выбранной
+                examProgress.value = examProgress.value + 20;
+                selectedWord = null;
+
+
+            } else {
+                this.classList.add("wrong");
+                const deleteWrong = setTimeout(() => {
+                    this.classList.remove("wrong")
+                }, 500);
+
+
+            }
+
+
+        }
+        const count = document.querySelectorAll(".card").length;
+        const cardFadeOut = document.querySelectorAll(".card.fade-out").length;
+        console.log(count)
+        console.log(cardFadeOut)
+        if (count === cardFadeOut) {
+            alert("Тренировка выполнена успешно!");
+        }
+        // как правильно сделать сравнение в конце тренировки? Будет ли так работать,если всем карточкам присвоится класс fade-out?
+
+
+
+
+
+    });
+    return card;
 }
 
 
@@ -156,8 +191,7 @@ function changeMode() {
     studyCards.classList.add('hidden');
     studyMode.classList.add('hidden');
     examMode.classList.remove('hidden');
-    prepareCards();
-
+    renderExamCards();
 }
 
 buttonExam.addEventListener("click", changeMode);
