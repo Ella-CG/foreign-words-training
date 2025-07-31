@@ -1,20 +1,20 @@
-const flipCard = document.querySelector('.flip-card');
-const cardFront = document.querySelector('.flip-card-front');
-const frontTitle = document.querySelector('#card-front h1');
-const cardBack = document.querySelector('.flip-card-back');
-const backTitle = document.querySelector('#card-back h1');
-const description = document.querySelector('#card-back span');
-const buttonNext = document.querySelector('#next');
-const buttonBack = document.querySelector('#back');
-const buttonExam = document.querySelector('#exam');
-const currentWord = document.querySelector('#current-word');
-const wordsProgress = document.querySelector('#words-progress');
-const studyCards = document.querySelector('.study-cards');
-const studyMode = document.querySelector('#study-mode');
-const examCards = document.querySelector('#exam-cards');
-const examMode = document.querySelector('#exam-mode');
-const examProgress = document.querySelector('#exam-progress');
-const correctPercent = document.querySelector('#correct-percent');
+const flipCard = document.querySelector(".flip-card");
+const cardFront = document.querySelector(".flip-card-front");
+const frontTitle = document.querySelector("#card-front h1");
+const cardBack = document.querySelector(".flip-card-back");
+const backTitle = document.querySelector("#card-back h1");
+const description = document.querySelector("#card-back span");
+const buttonNext = document.querySelector("#next");
+const buttonBack = document.querySelector("#back");
+const buttonExam = document.querySelector("#exam");
+const currentWord = document.querySelector("#current-word");
+const wordsProgress = document.querySelector("#words-progress");
+const studyCards = document.querySelector(".study-cards");
+const studyMode = document.querySelector("#study-mode");
+const examCards = document.querySelector("#exam-cards");
+const examMode = document.querySelector("#exam-mode");
+const examProgress = document.querySelector("#exam-progress");
+const time = document.querySelector("#time");
 
 
 
@@ -52,7 +52,12 @@ let isFliped = false;
 let wordCounter = 1;
 wordsProgress.value = 20;
 examProgress.value = 0;
+let minutes = 0;
+let seconds = 0;
 let selectedWord = null;
+let fadeoutCardsCount = 0;
+let percent = 0;
+let timerId;
 const dictionary = {};
 
 function fillDictionary() {
@@ -77,9 +82,9 @@ fillDictionary();
 function flipCards() {
     isFliped = !isFliped;
     if (isFliped) {
-        flipCard.classList.add('active');
+        flipCard.classList.add("active");
     } else {
-        flipCard.classList.remove('active');
+        flipCard.classList.remove("active");
     }
 }
 
@@ -116,6 +121,14 @@ buttonNext.addEventListener("click", nextSlide);
 buttonBack.addEventListener("click", prevSlide);
 
 
+function addZero(value) {
+    if (value < 10) {
+        return "0" + value;
+    }
+    return value;
+}
+
+
 function shuffleCards(arr) {
     arr.sort(() => Math.random() - 0.5);
 }
@@ -136,12 +149,18 @@ function renderExamCards() {
 
 }
 
+
 function makeExamCard(word) {
+
     const card = document.createElement("div");
     card.classList.add("card");
     card.textContent = word;
 
     card.addEventListener("click", function() {
+        if (card.classList.contains("correct") || card.classList.contains("fade-out")) {
+            return;
+        }
+
         if (!selectedWord) {
             selectedWord = this.textContent;
             this.classList.add("correct");
@@ -149,49 +168,79 @@ function makeExamCard(word) {
         } else {
             if (dictionary[this.textContent] === selectedWord) {
                 this.classList.add("correct");
-                if (card.classList.contains("correct")) {
+                const cardsCorrect = document.querySelectorAll(".correct");
+                cardsCorrect.forEach((card) => {
                     card.classList.add("fade-out");
-                }
-                //убирается только вторая карточка, не могу добраться до первой выбранной
-                examProgress.value = examProgress.value + 20;
-                selectedWord = null;
 
+                })
+                increasePercent();
+                fadeoutCardsCount++;
 
             } else {
                 this.classList.add("wrong");
-                const deleteWrong = setTimeout(() => {
-                    this.classList.remove("wrong")
-                }, 500);
+                const correct = document.querySelectorAll(".correct");
+                const wrong = document.querySelectorAll(".wrong");
+                const wrongCards = [...correct, ...wrong];
+                wrongCards.forEach((card) => {
+                    if (!card.classList.contains("fade-out")) {
+                        setTimeout(() => {
+                            card.className = "card";
+                        }, 500);
+                    };
 
-
+                })
             }
-
+            selectedWord = null;
 
         }
-        const count = document.querySelectorAll(".card").length;
-        const cardFadeOut = document.querySelectorAll(".card.fade-out").length;
-        console.log(count)
-        console.log(cardFadeOut)
-        if (count === cardFadeOut) {
-            alert("Тренировка выполнена успешно!");
-        }
-        // как правильно сделать сравнение в конце тренировки? Будет ли так работать,если всем карточкам присвоится класс fade-out?
-
-
-
-
+        checkEndGame();
 
     });
+
     return card;
+
+}
+
+function checkEndGame() {
+    if (fadeoutCardsCount === items.length) {
+        clearInterval(timerId);
+        setTimeout(() => {
+            alert("Тренировка успешно завершена!");
+        }, 800);
+    }
+}
+
+function changeMode() {
+    studyCards.classList.add("hidden");
+    studyMode.classList.add("hidden");
+    examMode.classList.remove("hidden");
+    renderExamCards();
+    startTimer();
+
 }
 
 
+function startTimer() {
+    timerId = setInterval(() => {
+        time.textContent = `${addZero(minutes)}:${addZero(seconds)}`;
+        seconds++;
+        if (seconds === 59) {
+            minutes++;
+            seconds = 0;
+        }
+    }, 1000);
 
-function changeMode() {
-    studyCards.classList.add('hidden');
-    studyMode.classList.add('hidden');
-    examMode.classList.remove('hidden');
-    renderExamCards();
+}
+
+function increasePercent() {
+    const correctPercent = document.querySelector("#correct-percent");
+
+    function newPercent(number) {
+        return number + 20;
+    }
+    percent = newPercent(percent);
+    correctPercent.textContent = percent + "%";
+    examProgress.value = examProgress.value + 20;
 }
 
 buttonExam.addEventListener("click", changeMode);
